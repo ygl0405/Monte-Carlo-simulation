@@ -1,0 +1,134 @@
+\documentclass{article}
+\usepackage{amsmath, amssymb}
+
+\begin{document}
+
+
+\section*{Monte Carlo Simulation for Asian Option with Volatility Shifts}
+Goal: Develop a flexible Monte-Carlo based robustness calculation and evaluation tool to asses the pricing accuracy of path-depedent derivatives by exploring
+the impact of shifting volatility on the simulation over the continous timeline and mathematical limitation of real world probabilities in model-pricing
+
+\subsection{Baseline}
+
+The Monte Carlo simulation generates random paths for the option price. To simulate the path for the derivative, we use a Geometric Brownian Motion (GBM) with time-varying volatility, which follows the Stochastic Differential Equation (SDE):
+
+\[
+S_{t + \Delta t} = S_t \cdot \exp\left( \left( \mu - \frac{1}{2} \sigma_{t + \Delta t}^2 \right) \Delta t + \sigma_{t + \Delta t} \sqrt{\Delta t} \cdot f(Z_t) \right)
+\]
+
+Where \( f(Z_t) \) is defined as:
+
+\[
+f(Z_t) = 
+\begin{cases} 
+z_{\text{max}} & \text{if } Z_t > z_{\text{max}} \\
+Z_t & \text{if } -z_{\text{max}} \leq Z_t \leq z_{\text{max}} \\
+-z_{\text{max}} & \text{if } Z_t < -z_{\text{max}}
+\end{cases}
+\]
+
+At each time step, the volatility is updated using the equation:
+
+\[
+\sigma_{t + \Delta t} = \max\left( \sigma_{\text{min}}, \sigma_t + v \cdot \sigma_t \cdot \sqrt{\Delta t} \cdot g(Z_2) \right)
+\]
+
+Where the function \( g(Z_2) \) is clipped to the range \( [-z_{\text{max}}, z_{\text{max}}] \):
+
+\[
+g(Z_2) = 
+\begin{cases} 
+z_{\text{max}} & \text{if } Z_2 > z_{\text{max}} \\
+Z_2 & \text{if } -z_{\text{max}} \leq Z_2 \leq z_{\text{max}} \\
+-z_{\text{max}} & \text{if } Z_2 < -z_{\text{max}}
+\end{cases}
+\]
+
+\textbf{Logarithmic Update of Asset Price}
+
+The logarithmic update of the asset price is given by:
+
+\[
+\log(S_{t + \Delta t}) = \log(S_t) + \left( \left( \mu - \frac{1}{2} \sigma_{t + \Delta t}^2 \right) \Delta t + \sigma_{t + \Delta t} \sqrt{\Delta t} \cdot f(Z_t) \right)
+\]
+
+The updated asset price is then calculated as:
+
+\[
+S_{t + \Delta t} = \exp\left( \log(S_{t + \Delta t}) \right)
+\]
+
+To prevent the overflow of input parameters applied logarithmic 
+
+\textbf{Payoff for Asian Option}
+
+The payoff for an Asian option is computed by averaging the asset prices over the simulation period:
+
+\[
+\bar{S} = \frac{1}{\text{num\_steps}} \sum_{t=1}^{\text{num\_steps}} S_t
+\]
+
+For an Asian call option, the payoff is:
+
+\[
+\text{payoff} = \max(\bar{S} - K, 0)
+\]
+
+For an Asian put option, the payoff is:
+
+\[
+\text{payoff} = \max(K - \bar{S}, 0)
+\]
+
+\textbf{Discounted Payoff}
+
+The discounted payoff is calculated as:
+
+\[
+\text{Discounted Payoff} = \exp(-rT) \cdot \text{Payoff}
+\]
+
+\textbf{Estimated Price of Asian Option}
+
+The estimated price of the Asian option is the average discounted payoff over all paths:
+
+\[
+\text{Estimated Price} = \frac{1}{\text{num\_paths}} \sum_{i=1}^{\text{num\_paths}} \text{Discounted Payoff}_i
+\]
+
+\textbf{Standard Deviation of Payoffs}
+
+The standard deviation of the discounted payoffs is calculated as:
+
+\[
+s = \sqrt{\frac{1}{\text{num\_paths} - 1} \sum_{i=1}^{\text{num\_paths}} \left( \text{Discounted Payoff}_i - \text{Estimated Price} \right)^2}
+\]
+
+\textbf{Confidence Interval Calculation}
+
+The confidence interval for the estimated price is given by:
+
+\[
+\text{CI} = \left[ \text{Estimated Price} - z \cdot \frac{s}{\sqrt{\text{num\_paths}}}, \, \text{Estimated Price} + z \cdot \frac{s}{\sqrt{\text{num\_paths}}} \right]
+\]
+
+Where \( z \) is the z-score corresponding to the desired confidence level (e.g., 1.96 for 95% confidence).
+
+\textbf{Mean Asset Price}
+
+The mean asset price across all paths is calculated as:
+
+\[
+\text{Mean Asset Price} = \frac{1}{\text{num\_paths}} \sum_{i=1}^{\text{num\_paths}} \bar{S}_i
+\]
+
+Validation and benchmarking:
+
+benchmarking- under running analytical solution for geometric average asian option price compared to the baseline montecarlo simulation, 
+the discrepancy between the analytical solution and monte carlo simulation printed out the result as to be 
+geometric asian option price: 5.1685
+monte carlo geometric asian option price: 6.2274
+
+
+
+\end{document}
